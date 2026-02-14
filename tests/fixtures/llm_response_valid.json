@@ -1,0 +1,10 @@
+{
+  "title": "Example Article",
+  "one_sentence": "A concise summary sentence.",
+  "summary_bullets": ["Point one", "Point two"],
+  "key_takeaways": ["Takeaway one"],
+  "why_it_matters": ["Impact one"],
+  "notable_quotes": [{"quote": "A quote", "context": "Its context"}],
+  "tags": ["ai", "python"],
+  "confidence": 0.87
+}

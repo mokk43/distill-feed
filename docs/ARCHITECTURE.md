@@ -583,9 +583,9 @@ CLI flag  >  Environment variable  >  .env file  >  Default
 
 ## 8. LLM Client Strategy
 
-### 8.1 Dual-API approach
+### 8.1 API selection strategy
 
-The `LLMClient` attempts the **Responses API** first and latches to **Chat Completions** on failure:
+For OpenAI-compatible providers, the `LLMClient` attempts the **Responses API** first and latches to **Chat Completions** on failure:
 
 ```
 State machine:
@@ -597,6 +597,14 @@ State machine:
 ```
 
 Once the API path is determined (on the first successful call), the client latches and skips the probe for all subsequent items in the same run. The latched value is recorded as `api_used` in the run report.
+
+For Google Gemini native API (`base_url` host `generativelanguage.googleapis.com` and non-OpenAI-compatible path), the client uses:
+
+```
+POST {base_url}/models/{model}:generateContent?key={api_key}
+```
+
+and records `api_used=chat_completions` in the run report for schema compatibility.
 
 ### 8.2 Request construction
 
@@ -619,6 +627,22 @@ response = await client.chat.completions.create(
     temperature=config.temperature,
     max_tokens=config.max_output_tokens,
     response_format={"type": "json_object"},
+)
+```
+
+**Gemini native API (`v1beta`):**
+```python
+response = await httpx_client.post(
+    f"{config.base_url}/models/{config.model}:generateContent",
+    params={"key": config.api_key},
+    json={
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": config.temperature,
+            "maxOutputTokens": config.max_output_tokens,
+            "responseMimeType": "application/json",
+        },
+    },
 )
 ```
 

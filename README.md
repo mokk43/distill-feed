@@ -14,9 +14,11 @@ It is designed for non-interactive agent workflows:
 2. Normalizes and deduplicates URLs globally.
 3. Selects items by date (`--since`) with a global cap (`--max-items`).
 4. Fetches article HTML and extracts readability-style main content.
-5. Summarizes with an OpenAI-compatible endpoint:
-   - Responses API first
-   - automatic fallback to Chat Completions if unsupported
+5. Summarizes with an LLM endpoint:
+   - OpenAI-compatible mode: Responses API first, then automatic fallback to Chat Completions if unsupported
+   - Gemini native mode: `generateContent` when using
+     `https://generativelanguage.googleapis.com/v1beta` (non-`/openai` path)
+   - OpenAI-compatible Gemini paths (for example `.../v1beta/openai`) stay on Responses/Chat routing
 6. Writes one Markdown digest file with date suffix:
    - `digest-YYYYMMDD.md` (derived from `--out` base path)
 7. Optionally writes a JSON run report to stdout (`--json`).
@@ -51,6 +53,16 @@ distill-feed digest [OPTIONS]
 - `--temperature <float>`
 - `--max-output-tokens <N>`
 - `--prompt-preset <name>`
+
+Gemini example:
+
+```bash
+distill-feed digest \
+  --url https://example.com/post \
+  --base-url https://generativelanguage.googleapis.com/v1beta \
+  --model gemini-2.0-flash \
+  --api-key "$DISTILL_FEED_API_KEY"
+```
 
 ### Runtime options
 
@@ -96,7 +108,7 @@ A single JSON object to stdout with stable keys:
 - `run_id`, `timestamp`
 - `inputs`
 - `selection`
-- `llm`
+- `llm` (`api_used` values are stable: `responses|chat_completions`)
 - `items` (statuses: `selected|summarized|skipped|failed`)
 - aggregate counts
 

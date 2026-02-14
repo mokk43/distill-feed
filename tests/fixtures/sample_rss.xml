@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>Example Feed</title>
+    <item>
+      <title>Newest Post</title>
+      <link>https://example.com/newest</link>
+      <pubDate>Sat, 14 Feb 2026 10:00:00 GMT</pubDate>
+      <author>alice@example.com</author>
+    </item>
+    <item>
+      <title>Older Post</title>
+      <link>https://example.com/older</link>
+      <pubDate>Fri, 13 Feb 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Undated Post</title>
+      <link>https://example.com/undated</link>
+    </item>
+  </channel>
+</rss>

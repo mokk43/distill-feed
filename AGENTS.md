@@ -37,10 +37,10 @@ This file defines implementation guidance for AI/coding agents working in this r
 
 ## LLM and Summarization Contract
 
-- Use OpenAI-compatible APIs via configurable `base_url`.
-- Call Responses API first.
-- Fallback to Chat Completions on unsupported signals (e.g., 404/405/signature).
-- Record final API path used (`responses` or `chat_completions`) in report.
+- Use configurable `base_url` with two routing modes:
+  - OpenAI-compatible mode: call Responses API first, fallback to Chat Completions on unsupported signals (e.g., 404/405/signature).
+  - Gemini native mode: if host is `generativelanguage.googleapis.com` and path is not OpenAI-compatible (`.../openai`), call `models/{model}:generateContent`.
+- Record final API path used as `responses` or `chat_completions` in report (keep this stable for compatibility).
 - Prompt output must be strict JSON matching the summary schema.
 - On invalid JSON, attempt one repair call; if still invalid, mark item failed.
 - Track `prompt_version` and include it in digest/report and summary cache keying.
@@ -73,7 +73,7 @@ This file defines implementation guidance for AI/coding agents working in this r
 
 - Never log API keys.
 - Avoid logging full extracted content by default.
-- Use timeout, retries/backoff, and bounded concurrency.
+- Use timeout, retries/backoff, and bounded concurrency (including Gemini native LLM HTTP calls).
 - Keep per-item failures isolated; never fail whole run due to one item.
 - Cache only non-secret data (html, extracted text, metadata, summaries).
 
@@ -96,10 +96,12 @@ This file defines implementation guidance for AI/coding agents working in this r
 - Cover:
   - selection semantics (`--since`, undated behavior, global cap)
   - fallback Responses -> Chat Completions
+  - Gemini routing (native vs OpenAI-compatible endpoint path)
+  - retry/backoff behavior on retryable LLM HTTP errors
   - digest naming and structure
   - `--dry-run` no-LLM path
   - always-exit-0 behavior
-  - JSON report schema and statuses
+  - JSON report schema and statuses (including stable `llm.api_used` values)
 
 ## Change Discipline
 
