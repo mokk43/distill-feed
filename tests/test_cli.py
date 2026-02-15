@@ -28,3 +28,21 @@ def test_cli_invalid_config_still_exit_zero() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["digest", "--concurrency", "0"])
     assert result.exit_code == 0
+
+
+def test_cli_digest_usage_option_shows_guide() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["digest", "--usage"])
+    assert result.exit_code == 0
+    assert "Usage:" in result.output
+    assert "distill-feed digest [OPTIONS]" in result.output
+    assert "Examples:" in result.output
+
+
+def test_cli_digest_help_option_shows_options() -> None:
+    runner = CliRunner()
+    result = runner.invoke(cli, ["digest", "--help"])
+    assert result.exit_code == 0
+    assert "Usage:" in result.output
+    assert "--usage" in result.output
+    assert "--feed" in result.output

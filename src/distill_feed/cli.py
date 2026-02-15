@@ -14,6 +14,21 @@ from distill_feed.output.report import emit_report
 from distill_feed.pipeline import run
 
 
+USAGE_GUIDE = """Usage:
+  distill-feed digest [OPTIONS]
+
+Examples:
+  distill-feed digest --feed https://example.com/rss --max-items 5
+  distill-feed digest --feeds-file feeds.txt --since 2026-02-01 --out digest-output/digest.md
+  distill-feed digest --url https://example.com/post --dry-run --json
+
+Tips:
+  - Use --help (or -h) to see all options.
+  - --feed/--feeds-file and --url/--urls-file can be combined.
+  - Output file name is date-suffixed automatically.
+"""
+
+
 def _read_urls_file(path: Path | None) -> list[str]:
     if path is None:
         return []
@@ -26,12 +41,45 @@ def _read_urls_file(path: Path | None) -> list[str]:
     return values
 
 
-@click.group()
-def cli() -> None:
-    """distill-feed command group."""
+def _show_usage(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo(USAGE_GUIDE)
+    ctx.exit(0)
 
 
-@cli.command("digest")
+@click.group(
+    context_settings={"help_option_names": ["--help", "-h"]},
+    invoke_without_command=True,
+)
+@click.option(
+    "--usage",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_show_usage,
+    help="Show usage guide and examples.",
+)
+@click.pass_context
+def cli(ctx: click.Context) -> None:
+    """Distill feed entries into a Markdown digest."""
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@cli.command(
+    "digest",
+    context_settings={"help_option_names": ["--help", "-h"]},
+    help="Build a digest from feed and article URLs.",
+)
+@click.option(
+    "--usage",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_show_usage,
+    help="Show usage guide and examples.",
+)
 @click.option("--feed", "feed_urls", multiple=True, help="RSS/Atom feed URL (repeatable).")
 @click.option(
     "--feeds-file",
