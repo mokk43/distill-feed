@@ -23,22 +23,22 @@ def render_digest(items: list[ItemResult], config: Config, report: RunReport) ->
             continue
 
         lines.append(f"## {summary.title or item.title or 'Untitled'}")
-        lines.append(f"Source: {item.url}")
-        lines.append(f"Published: {item.date.strftime('%Y-%m-%d') if item.date else 'unknown'}")
+        lines.append(f"* Source: {item.url}")
+        lines.append(f"* Published: {item.date.strftime('%Y-%m-%d') if item.date else 'unknown'}")
         lines.append("")
         lines.append(summary.one_sentence.strip() or "(none)")
         lines.append("")
-        lines.append("Summary")
+        lines.append("#### Summary")
         lines.append(_render_paragraph(summary.summary_bullets))
         lines.append("")
-        lines.append("Key takeaways")
+        lines.append("#### Key takeaways")
         lines.append(_render_paragraph(summary.key_takeaways))
         lines.append("")
-        lines.append("Why it matters")
+        lines.append("#### Why it matters")
         lines.append(_render_paragraph(summary.why_it_matters))
         if summary.notable_quotes:
             lines.append("")
-            lines.append("Notable quotes")
+            lines.append("#### Notable quotes")
             for quote in summary.notable_quotes:
                 quote_text = quote.quote.strip()
                 context_text = quote.context.strip()
