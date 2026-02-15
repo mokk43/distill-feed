@@ -3,11 +3,11 @@
 - **Project**: `distill-feed`
 - **Owner**: Gary Chang
 - **License**: MIT
-- **Last updated**: 2026-02-14
+- **Last updated**: 2026-02-15
 - **Status**: Draft (implementation-ready)
 
 ## 1. Summary
-Build a **Python CLI** that ingests blog articles (from **RSS/Atom feeds** and/or explicit **URLs**), fetches and performs **readability-style extraction** to obtain the main article text, summarizes each article using an **OpenAI-compatible API** (**Responses API first**, with automatic fallback to **Chat Completions**), and writes a **single combined Markdown digest** (`digest.md`) containing a **run timestamp** plus per-article summaries. The CLI is designed to be invoked by **AI agents / agent skills** (non-interactive, stable output, optional machine-readable report).
+Build a **Python CLI** that ingests blog articles (from **RSS/Atom feeds** and/or explicit **URLs**), fetches and performs **readability-style extraction** to obtain the main article text, summarizes each article using an **OpenAI-compatible API** (**Responses API first**, with automatic fallback to **Chat Completions**), and writes a **single combined Markdown digest** (`digest.md`) with read-friendly per-article summaries. The CLI is designed to be invoked by **AI agents / agent skills** (non-interactive, stable output, optional machine-readable report).
 
 ## 2. Goals / Non-goals
 
@@ -15,7 +15,7 @@ Build a **Python CLI** that ingests blog articles (from **RSS/Atom feeds** and/o
 - **Agent-friendly CLI**: non-interactive by default; predictable outputs; optional JSON run report.
 - **Provider-agnostic LLM**: supports OpenAI-compatible endpoints via configurable `base_url`.
 - **Good article extraction**: readability-style main content extraction suitable for common blogs/news sites.
-- **Single output artifact**: one `digest.md` per run, with consistent structure and timestamp.
+- **Single output artifact**: one `digest.md` per run, with consistent article-section structure.
 
 ### 2.2 Non-goals (v1)
 - Browser automation / JS rendering (e.g., Playwright) as a default requirement.
@@ -48,7 +48,6 @@ Build a **Python CLI** that ingests blog articles (from **RSS/Atom feeds** and/o
   - Default base: `./digest.md`
   - The CLI writes: `./digest-YYYYMMDD.md` (date derived from run timestamp; UTC recommended)
 - **Single output file only** (no per-article files).
-- Digest includes a **run timestamp** in the header (UTC recommended).
 - `--json`: emit machine-readable run report JSON to **stdout** (markdown still written to `--out`).
 
 #### LLM options
@@ -67,14 +66,13 @@ Build a **Python CLI** that ingests blog articles (from **RSS/Atom feeds** and/o
 - `--timeout <seconds>`: network timeout for fetch + LLM calls.
 - `--concurrency <N>`: parallelism for fetch/extract/summarize (default modest, e.g. 4).
 - `--cache-dir <path>`: cache directory (default e.g. `~/.cache/distill-feed/`).
-- `--dry-run`: do not call LLM; list selected items and reasons.
+- `--dry-run`: do not call LLM; selection outcomes remain available via run report/logs.
 - `--verbose`: more logs to stderr (never print API keys).
 
 ### 4.2 Exit code policy
 - **Always exit with code `0`**, including partial and total failures.
 - All errors are surfaced via:
-  - written `digest.md` failure sections, and/or
-  - `--json` run report, and/or
+  - `--json` run report (recommended), and/or
   - stderr logs.
 
 > Rationale: agent pipelines should not break on transient failures; downstream logic should consult the run report.
@@ -157,46 +155,32 @@ Example schema:
 }
 ```
 
-If the model output is invalid JSON, perform one repair attempt (model-assisted JSON repair) and otherwise mark the item as failed with a parse error (still included in digest report).
+If the model output is invalid JSON, perform one repair attempt (model-assisted JSON repair) and otherwise mark the item as failed with a parse error (captured in run report/logs).
 
 ### 7.3 Prompt versioning
 - Maintain a `prompt_version` identifier.
 - Include `prompt_version` in:
-  - `digest.md` header
   - JSON run report
   - cache keys for summaries
 
 ## 8. Output: Markdown Digest (`digest.md`)
 
-### 8.1 Header (top of file)
-Must include:
-- Run timestamp (UTC recommended)
-- Input sources summary (feed count, URL count, items selected)
-- LLM configuration summary (safe fields only: `base_url`, `model`, `llm_api_used`, `prompt_version`)
-- Success/failure counts
+### 8.1 Article-only format
+The markdown digest is intentionally read-friendly and article-focused:
+- include only items with `status=summarized` and valid summary payload
+- omit run-level metadata header/tail sections
+- place operational metadata and failures in JSON report/stderr logs
 
 ### 8.2 Per-article section (stable structure)
-For each selected item:
+For each summarized item:
 - `## {Article Title}`
-  - Source: `{url}`
-  - Feed: `{feed_title | "direct"}`
-  - Published: `{date | "unknown"}`
-  - Extraction: `{quality note}`
-  - One sentence: …
-  - Summary:
-    - …
-  - Key takeaways:
-    - …
-  - Why it matters:
-    - …
-  - Quotes (optional):
-    - “…” — …
-  - Tags (optional): `tag1, tag2`
-
-### 8.3 Tail: Run report section
-At end of file, include a concise list of:
-- skipped items (and reason)
-- failed items (error type + brief message)
+  - `Source: {url}`
+  - `Published: {YYYY-MM-DD | "unknown"}`
+  - one-sentence summary as a standalone paragraph
+  - `Summary` section as a paragraph
+  - `Key takeaways` section as a paragraph
+  - `Why it matters` section as a paragraph
+  - optional `Notable quotes` lines in the format `"quote" -- context`
 
 ## 9. Machine-readable Run Report (`--json`)
 When `--json` is set:
@@ -221,12 +205,12 @@ Report fields (minimum):
 - Cache directory must not store secrets.
 
 ## 11. Acceptance Criteria (v1)
-- Given a feeds file and `--max-items 10`, the CLI writes `digest-YYYYMMDD.md` with up to 10 article sections and a timestamp header.
+- Given a feeds file and `--max-items 10`, the CLI writes `digest-YYYYMMDD.md` with up to 10 summarized article sections.
 - `--since` excludes older items **only when dated**; undated items remain eligible.
 - `--max-items` applies **globally** across all feeds and direct URLs.
 - LLM integration uses **Responses first** and automatically falls back to **Chat Completions** when Responses is unsupported.
-- `--dry-run` performs **no** LLM calls and clearly reports planned selection.
-- CLI exits with **code 0** even on failures; failures are visible in markdown/run report.
+- `--dry-run` performs **no** LLM calls and records selection outcomes in report/logs.
+- CLI exits with **code 0** even on failures; failures are visible in run report/logs.
 
 ## 12. Milestones
 - **M0**: CLI skeleton + config/env + markdown writer (no LLM).
@@ -234,4 +218,3 @@ Report fields (minimum):
 - **M2**: RSS ingestion + global ranking + `--since` + global `--max-items`.
 - **M3**: caching + retry/backoff + concurrency + `--json` report.
 - **M4**: hardening (dedupe improvements, more extraction heuristics, provider quirks).
-

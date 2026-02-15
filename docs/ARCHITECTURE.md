@@ -2,7 +2,7 @@
 
 - **Project**: `distill-feed`
 - **Based on**: [PRD](PRD.md)
-- **Last updated**: 2026-02-14
+- **Last updated**: 2026-02-15
 
 ---
 
@@ -457,9 +457,9 @@ erDiagram
 ### 5.11 `output/markdown.py` -- Markdown Digest Writer
 
 - `def render_digest(items: list[ItemResult], config, report) -> str`
-- Build header: run timestamp, input sources summary, LLM config (`base_url`, `model`, `llm_api_used`, `prompt_version`), success/failure counts.
-- Per-article sections with stable structure per PRD section 8.2.
-- Tail section: skipped items, failed items with error summaries.
+- Read-friendly article-only output: include only `status=summarized` items with valid summaries.
+- Omit run-level header/tail metadata from markdown; run metadata stays in JSON report/logs.
+- Per-article sections use stable plain-text blocks per PRD section 8.2.
 - `def write_digest(content: str, out_base: str, run_date: date) -> Path`
   - Compute filename: `{stem}-{YYYYMMDD}{suffix}` from `out_base`.
   - Write UTF-8 file and return path.
@@ -490,11 +490,11 @@ erDiagram
   2. **Ingest**: parse feeds + collect direct URLs.
   3. **Normalize + dedup**.
   4. **Select**: sort, filter by `--since`, cap by `--max-items`; retain skipped items + reasons.
-  5. If `--dry-run`: build report with `selected` and `skipped` item records, render digest stub, return (no LLM client initialization or calls).
+  5. If `--dry-run`: build report with `selected` and `skipped` item records, render article-only digest (may be empty), return (no LLM client initialization or calls).
   6. **Process** each selected item concurrently (bounded by semaphore):
      - fetch -> extract -> summarize (or mark failed at any stage).
   7. Merge processed item records with skipped item records into final report payload.
-  8. **Output**: render markdown digest, optionally emit JSON report.
+  8. **Output**: render markdown digest for summarized items, optionally emit JSON report.
   9. Return `RunReport`.
 
 ---
@@ -519,7 +519,7 @@ Step-by-step walkthrough of a typical `distill-feed digest` invocation:
 6. Deduplicated --(selector)--> selected list[FeedItem] + skipped list
    (sort by date, apply --since, apply --max-items)
                     |
-7. If --dry-run: render stub digest + report (selected + skipped records), return
+7. If --dry-run: render article-only digest (may be empty) + report (selected + skipped records), return
                     |
 8. For each selected item (concurrently, semaphore-bounded):
    a. fetch_article(url) --> FetchResult
@@ -535,7 +535,7 @@ Step-by-step walkthrough of a typical `distill-feed digest` invocation:
                     |
 9. Collect all ItemResult and append skipped item records
                     |
-10. render_digest(items, config) --> write digest-YYYYMMDD.md
+10. render_digest(items, config, report) --> write digest-YYYYMMDD.md
                     |
 11. If --json: build_report(...) --> emit JSON to stdout
                     |
@@ -577,7 +577,7 @@ CLI flag  >  Environment variable  >  .env file  >  Default
 - `--api-key` is optional when `DISTILL_FEED_API_KEY` is provided by environment or `.env`.
 - If neither CLI nor env provides an API key:
   - `--dry-run` remains valid (no LLM calls).
-  - non-dry-run marks attempted summarization items as failed with a clear missing-credentials error in digest/report, while still exiting with code 0.
+  - non-dry-run marks attempted summarization items as failed with a clear missing-credentials error in report/logs, while still exiting with code 0.
 
 ---
 
@@ -741,7 +741,7 @@ async def process_items(items: list[FeedItem], config: Config) -> list[ItemResul
 ### 11.1 Design principles
 
 - **Never crash the CLI.** All errors are caught at the pipeline level.
-- **Always exit 0.** Errors are surfaced in the digest markdown and/or JSON report.
+- **Always exit 0.** Errors are surfaced in JSON report and/or stderr logs.
 - **Per-item isolation.** A failure in one article does not affect others.
 - **Never log secrets.** API keys are masked in all log output.
 
@@ -760,8 +760,8 @@ async def process_items(items: list[FeedItem], config: Config) -> list[ItemResul
 
 ```
 stderr (logging)  <-- always, for human/agent log consumption
-digest.md tail    <-- skipped + failed items listed with reasons
---json report     <-- full structured error info per item
+--json report     <-- full structured status + error info per item
+digest.md         <-- summarized article content only
 ```
 
 ---
@@ -823,7 +823,7 @@ pytest tests/ -v
 | `src/distill_feed/cli.py` | Click group + `digest` subcommand with all options |
 | `src/distill_feed/config.py` | `Config` BaseSettings with all fields + `.env` loading |
 | `src/distill_feed/models.py` | All Pydantic models (FeedItem through RunReport) |
-| `src/distill_feed/output/markdown.py` | Digest renderer (header + stub sections) |
+| `src/distill_feed/output/markdown.py` | Digest renderer (article-only sections) |
 | `src/distill_feed/output/report.py` | JSON report builder + emitter |
 | `src/distill_feed/pipeline.py` | Skeleton orchestration (no fetch/extract/summarize yet) |
 | `tests/test_cli.py` | CLI smoke tests via CliRunner |
@@ -883,4 +883,4 @@ pytest tests/ -v
 - **Logging**: `--verbose` increases log detail but redacts keys; article text is not logged unless explicitly enabled.
 - **Cache**: stores only public content (HTML, extracted text, summaries); no secrets.
 - **Network**: User-Agent identifies the tool; no hidden tracking.
-- **Digest output**: LLM config section shows `base_url` and `model` but never `api_key`.
+- **Digest output**: article-only summaries; run-level LLM metadata lives in JSON report and never includes `api_key`.

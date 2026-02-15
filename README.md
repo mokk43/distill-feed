@@ -5,7 +5,7 @@ Distill-Feed is a Python CLI that builds a single Markdown digest from RSS/Atom 
 It is designed for non-interactive agent workflows:
 - deterministic output shape
 - machine-readable JSON run report (`--json`)
-- resilient execution (`exit 0` even on partial/total failures, with failures reported in output)
+- resilient execution (`exit 0` even on partial/total failures, with failure details in report/logs)
 
 ## What It Does
 
@@ -69,7 +69,7 @@ distill-feed digest \
 - `--timeout <seconds>`
 - `--concurrency <N>`
 - `--cache-dir <path>`
-- `--dry-run` (no LLM calls; reports selected/skipped plan)
+- `--dry-run` (no LLM calls; selection details remain in report/logs, digest may be empty)
 - `--verbose`
 
 ## Configuration
@@ -88,7 +88,7 @@ API key semantics:
 - `--api-key` may be omitted if `DISTILL_FEED_API_KEY` exists in env or `.env`
 - without any API key:
   - `--dry-run` is valid
-  - non-dry-run records missing-credential failures in digest/report and still exits `0`
+  - non-dry-run records missing-credential failures in report/logs and still exits `0`
 
 ## Outputs
 
@@ -98,9 +98,9 @@ Single output file per run:
 - `{out_stem}-YYYYMMDD{out_suffix}`
 
 Digest structure includes:
-- header with run timestamp, input summary, LLM config (`base_url`, `model`, `llm_api_used`, `prompt_version`), success/failure counts
-- stable per-article sections
-- tail section with skipped and failed items + reasons
+- article-only sections for summarized items
+- stable per-article text blocks (`Source`, `Published`, one-sentence summary, `Summary`, `Key takeaways`, `Why it matters`, optional `Notable quotes`)
+- no run header/tail metadata in markdown; use `--json` for run-level details
 
 ### JSON run report (`--json`)
 
@@ -117,7 +117,7 @@ Human logs go to stderr.
 ## Reliability and Error Policy
 
 - CLI always exits with code `0`.
-- Failures are surfaced via digest tail, JSON report, and stderr logs.
+- Failures are surfaced via JSON report and stderr logs.
 - Per-item failure isolation: one bad item does not stop the run.
 - API keys are never logged.
 

@@ -14,11 +14,11 @@ This file defines implementation guidance for AI/coding agents working in this r
 - Build a non-interactive Python CLI: `distill-feed digest`.
 - Always write one combined Markdown digest output file per run, with date suffix:
   - `{out_stem}-YYYYMMDD{out_suffix}`
-- Include run timestamp and stable section structure in digest.
+- Keep digest markdown read-friendly and article-focused, with stable per-article structure.
 - Optionally emit machine-readable run report JSON to stdout (`--json`).
 - Keep human logs on stderr.
 - Always exit with code `0`, even when there are failures.
-- Errors must be visible in digest/report/logs.
+- Errors must be visible in report/logs.
 
 ## Required CLI Semantics
 
@@ -43,7 +43,7 @@ This file defines implementation guidance for AI/coding agents working in this r
 - Record final API path used as `responses` or `chat_completions` in report (keep this stable for compatibility).
 - Prompt output must be strict JSON matching the summary schema.
 - On invalid JSON, attempt one repair call; if still invalid, mark item failed.
-- Track `prompt_version` and include it in digest/report and summary cache keying.
+- Track `prompt_version` and include it in report and summary cache keying.
 
 ## API Key and Env Rules
 
@@ -58,12 +58,13 @@ This file defines implementation guidance for AI/coding agents working in this r
 
 ## Output and Report Rules
 
-- Digest header must include:
-  - run timestamp
-  - input source counts
-  - LLM config summary: `base_url`, `model`, `llm_api_used`, `prompt_version`
-  - success/failure counts
-- Digest tail must include skipped and failed items with reasons.
+- Digest markdown should include only summarized article sections:
+  - title heading
+  - source URL and published date
+  - one-sentence summary
+  - `Summary`, `Key takeaways`, and `Why it matters` paragraph blocks
+  - optional notable quotes
+- Keep run metadata, skipped items, and failed-item reasons in JSON report/logs.
 - JSON report must be one object with stable keys and item-level statuses:
   - statuses: `selected`, `summarized`, `skipped`, `failed`
   - include skip/failure reasons

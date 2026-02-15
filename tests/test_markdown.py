@@ -37,6 +37,7 @@ def test_render_digest_has_required_header_fields() -> None:
     item = ItemResult(
         status=ItemStatus.SUMMARIZED,
         url="https://example.com/post",
+        date=datetime(2026, 2, 14, 12, 34, 56, tzinfo=timezone.utc),
         summary=ArticleSummary(
             title="Title",
             one_sentence="One sentence",
@@ -49,6 +50,9 @@ def test_render_digest_has_required_header_fields() -> None:
         ),
     )
     text = render_digest([item], config, report)
-    assert "Run timestamp" in text
-    assert "llm_api_used" in text
+    assert "Run timestamp" not in text
+    assert "llm_api_used" not in text
     assert "## Title" in text
+    assert "Published: 2026-02-14" in text
+    assert "- A" not in text
+    assert "Skipped Items" not in text
